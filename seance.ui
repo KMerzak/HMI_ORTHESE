@@ -26,13 +26,13 @@
     <string>PushButton</string>
    </property>
   </widget>
-  <widget class="QTableView" name="tableView">
+  <widget class="QColumnView" name="columnView">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>110</y>
+     <y>20</y>
      <width>731</width>
-     <height>321</height>
+     <height>431</height>
     </rect>
    </property>
   </widget>
