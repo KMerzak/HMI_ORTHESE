@@ -152,7 +152,9 @@ class Exercice(QWidget,exo):
 #Fonction qui crée la connection à notre base de données
 def createConnection():
     con = QSqlDatabase.addDatabase("QSQLITE")
-    con.setDatabaseName(r"C:\Users\Merzak\Desktop\HMI_ORTHESE\Orthe.db")
+    path=os.path.dirname(os.path.realpath(__file__))+"\\Orthe.db"
+    
+    con.setDatabaseName(path)
     if not con.open():
         QMessageBox.critical(
             None,
