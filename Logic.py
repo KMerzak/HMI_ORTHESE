@@ -2,7 +2,7 @@ from PyQt5.uic import loadUiType
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtSql import QSqlDatabase, QSqlTableModel
+from PyQt5.QtSql import QSqlDatabase, QSqlTableModel,QSqlRecord
 import os
 import sys
 
@@ -43,15 +43,21 @@ class Seance(QWidget,sea):
         if not createConnection():
             sys.exit(1)
 
-        self.tableModel = QSqlTableModel(self)
+        self.tableSeanceModel = QSqlTableModel(self)
+        self.tableExerciceModel = QSqlTableModel(self)
+
         self.columnModel=QStandardItemModel()
 
-        self.tableModel.setTable("Seances")
-        self.tableModel.select()
+        self.tableSeanceModel.setTable("Seances")
+        self.tableExerciceModel.setTable("Exercices")
+
+        self.tableSeanceModel.select()
 
         self.selectData()
 
         self.columnView.setModel(self.columnModel)
+
+        self.columnView.setResizeGripsVisible(False)
 
 
     #Fonction qui récupère les données correspondantes aux séances
@@ -59,28 +65,65 @@ class Seance(QWidget,sea):
         self.lstSeance = []
         self.nomExo = []
         self.lstExo=[]
-        #self.
-        for i in range(self.tableModel.rowCount()) :
+        self.attributeExo = []
 
-            self.data = self.tableModel.record(i)
+        self.dataExo=[]
 
+        self.defs = [QStandardItem("Nom"), QStandardItem("Durée"), QStandardItem("Raideur Alpha"),
+                     QStandardItem("Raideur Beta"), QStandardItem("Raideur Gamma"), QStandardItem("Vitesse Alpha"),
+                     QStandardItem("Vitesse Beta"), QStandardItem("Vitesse Gamma")]
+
+
+        for i in range(self.tableSeanceModel.rowCount()) :
+            #On récupère les données de la table Seances
+            self.data = self.tableSeanceModel.record(i)
 
             self.lstSeance.append(QStandardItem(self.data.value("Nom")))
-            self.exo=self.data.value("Liste_exo")
 
+            #On récupère la liste des exercices
+            self.exo=self.data.value("Liste_exo")
             self.nomExo=self.exo.split(",")
 
+            #On ajoute à chaque séance ses exercices
             for j in self.nomExo :
                 self.lstExo.append(QStandardItem(j))
                 self.lstSeance[i].appendRow(self.lstExo[-1])
 
+            #On ajoute notre séance à la liste des séances
             self.columnModel.appendRow(self.lstSeance[i])
 
 
-            print(type(self.data.value("Liste_exo")))
 
-    def triExo(self,nomExercice):
-        pass
+        self.triExo()
+
+        self.columnView.clicked.connect(self.sel)
+
+
+
+    def sel(self,index):
+        self.currentIndex=index
+        self.parentIndex=index.parent()
+        self.ExoParent=self.columnModel.itemFromIndex(self.parentIndex)
+
+
+
+    #Fonction qui attribue chaque valeurs à son exercice correspondant
+    def triExo(self):
+
+        for i in range(len(self.lstExo)) :
+            #On réinitialise notre liste dattributs pour chaque exercice (pour pas avoir de chevauchement)
+            self.attributeExo.clear()
+
+            #On séléctionne uniquement les exercices de la table Exercice qui sont dans la séance
+            self.tableExerciceModel.setFilter("Nom = '{}' ".format(self.lstExo[i].text()))
+            self.tableExerciceModel.select()
+
+            #On itère pour chaque attributs
+            for j in range(len(self.defs)) :
+                 self.attributeExo.append(QStandardItem(self.defs[j]))
+                 self.lstExo[i].appendRow(self.attributeExo[-1])
+                 self.attributeExo[j].appendRow(QStandardItem(str(self.tableExerciceModel.record(0).field(j).value())))
+
 
 
 #Classe qui définit la fenêtre des Exercices
@@ -110,6 +153,8 @@ class Exercice(QWidget,exo):
         self.model.setHeaderData(7, Qt.Horizontal, "Vitesse Gamma")
 
 
+
+
         #Ajout Limite Movement max positive + negative + valeur que le medecin peut appliquer
         #Ajout de cycle + durée cycle en fct de durée
 
@@ -120,10 +165,18 @@ class Exercice(QWidget,exo):
         self.rowToDelete=None
         self.tableView.resizeColumnsToContents()#Sert à redimensionner les colonnes
         self.tableView.pressed.connect(self.selectDel)
+
+
         self.buttEnrModif.clicked.connect(self.model.submitAll)#Enregistre les modifs
+
         self.buttAnnul.clicked.connect(self.model.revertAll)#Annule les modifs
+
         self.buttAjtExo.clicked.connect(self.model.insertRow)
+
         self.buttDelExo.clicked.connect(self.delWarning)
+
+        self.buttRetour.clicked.connect(self.close)
+
 
 
 #Selectionne la ligne à supprimer
@@ -153,7 +206,7 @@ class Exercice(QWidget,exo):
 def createConnection():
     con = QSqlDatabase.addDatabase("QSQLITE")
     path=os.path.dirname(os.path.realpath(__file__))+"\\Orthe.db"
-    
+
     con.setDatabaseName(path)
     if not con.open():
         QMessageBox.critical(
