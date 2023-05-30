@@ -113,6 +113,20 @@
     <string>Retour</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="buttAjExoSea">
+   <property name="geometry">
+    <rect>
+     <x>920</x>
+     <y>510</y>
+     <width>211</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Ajouter Exercice à
+ Seance</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>

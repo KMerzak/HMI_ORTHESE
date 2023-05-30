@@ -45,6 +45,7 @@ class Seance(QWidget,sea):
 
         self.tableSeanceModel = QSqlTableModel(self)
         self.tableExerciceModel = QSqlTableModel(self)
+        self.currentIndex= None
 
         self.columnModel=QStandardItemModel()
 
@@ -59,6 +60,55 @@ class Seance(QWidget,sea):
 
         self.columnView.setResizeGripsVisible(False)
 
+        self.buttAjSeance.clicked.connect(self.AjSeance)
+
+        self.buttAjExo.clicked.connect(self.AjExo)
+
+        self.columnView.clicked.connect(self.sel)
+
+        self.buttEnregSean.clicked.connect(self.ajSeanceBase)
+
+    def AjSeance(self):
+        self.columnModel.insertRow(self.columnModel.rowCount(),QStandardItem('New Seance'))
+
+    def ajSeanceBase(self):
+        self.tableSeanceModel.setFilter("")
+        self.tableSeanceModel.select()
+        if self.currentIndex is not None :
+            for i in range(self.tableSeanceModel.rowCount()) :
+                if self.columnModel.itemFromIndex(self.currentIndex).text() == self.tableSeanceModel.record(i).field(0).value() :
+                    print(i)
+                    print("égale")
+                    return
+            self.rec=self.tableSeanceModel.record()
+            self.rec.setValue(0,"{}".format(self.columnModel.itemFromIndex(self.currentIndex).text()))
+            self.tableSeanceModel.insertRecord(-1,self.rec)
+            self.tableSeanceModel.submitAll()
+
+
+    def AjExo(self):
+        self.exo1 = Exercice()
+        self.exo1.buttAjExoSea.show()
+        self.exo1.show()
+        self.exo1.buttAjExoSea.clicked.connect(self.selExo)
+
+    def selExo(self):
+
+        self.exoToAdd=self.exo1.model.record(self.exo1.rowSelected).field(0).value()
+        self.tableSeanceModel.setFilter("Nom = '{}' ".format(self.columnModel.itemFromIndex(self.currentIndex).text()))
+        self.tableSeanceModel.select()
+        self.oldSeance=self.tableSeanceModel.record(0)
+        self.newLstExo=self.tableSeanceModel.record(0).field(1).value() + ',' + self.exoToAdd
+        self.tableSeanceModel.setData(self.tableSeanceModel.index(0,1),self.newLstExo)
+        self.tableSeanceModel.submitAll()
+        self.columnModel.clear()
+        self.selectData()
+        self.exo1.close()
+
+
+
+
+
 
     #Fonction qui récupère les données correspondantes aux séances
     def selectData(self):
@@ -69,6 +119,9 @@ class Seance(QWidget,sea):
 
         self.dataExo=[]
 
+        self.tableSeanceModel.setFilter("")
+        self.tableSeanceModel.select()
+
         self.defs = [QStandardItem("Nom"), QStandardItem("Durée"), QStandardItem("Raideur Alpha"),
                      QStandardItem("Raideur Beta"), QStandardItem("Raideur Gamma"), QStandardItem("Vitesse Alpha"),
                      QStandardItem("Vitesse Beta"), QStandardItem("Vitesse Gamma")]
@@ -78,6 +131,7 @@ class Seance(QWidget,sea):
             #On récupère les données de la table Seances
             self.data = self.tableSeanceModel.record(i)
 
+
             self.lstSeance.append(QStandardItem(self.data.value("Nom")))
 
             #On récupère la liste des exercices
@@ -86,8 +140,9 @@ class Seance(QWidget,sea):
 
             #On ajoute à chaque séance ses exercices
             for j in self.nomExo :
-                self.lstExo.append(QStandardItem(j))
-                self.lstSeance[i].appendRow(self.lstExo[-1])
+                if j != "" :
+                    self.lstExo.append(QStandardItem(j))
+                    self.lstSeance[i].appendRow(self.lstExo[-1])
 
             #On ajoute notre séance à la liste des séances
             self.columnModel.appendRow(self.lstSeance[i])
@@ -96,7 +151,6 @@ class Seance(QWidget,sea):
 
         self.triExo()
 
-        self.columnView.clicked.connect(self.sel)
 
 
 
@@ -104,6 +158,8 @@ class Seance(QWidget,sea):
         self.currentIndex=index
         self.parentIndex=index.parent()
         self.ExoParent=self.columnModel.itemFromIndex(self.parentIndex)
+
+
 
 
 
@@ -131,7 +187,7 @@ class Exercice(QWidget,exo):
     def __init__(self,parent=None):
         super(Exercice, self).__init__(parent)
         self.setupUi(self)
-
+        self.buttAjExoSea.hide()
 
         #On vérifie la connection avec la base de donnée locale
         if not createConnection():
@@ -179,10 +235,14 @@ class Exercice(QWidget,exo):
 
 
 
+
+
+
 #Selectionne la ligne à supprimer
     def selectDel(self,index):
         self.ind=index
         self.rowToDelete=self.ind.row()
+        self.rowSelected=self.ind.row()
 
 #Fonction qui supprimme la ligne
     def delRowOnClick(self):
